@@ -1,0 +1,667 @@
+<html>
+	<head>
+		<title>Writer</title>
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+		<script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
+		<script src="http://cdnjs.cloudflare.com/ajax/libs/backbone.js/0.9.10/backbone-min.js"></script>
+
+		<!--rich text editor-->
+		<script src="js/lib/nicEditor.js" type="text/javascript"></script>
+		
+		
+		<!--canvas-->
+		<script src="js/lib/extremedraw.js"></script>
+		
+		<script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+		<script src="http://code.jquery.com/ui/1.10.2/jquery-ui.js"></script>
+		<link rel="stylesheet" href="http://code.jquery.com/ui/1.10.2/themes/smoothness/jquery-ui.css" />
+		
+		<script src="js/rightdiv.js"></script>
+		<script src="js/assessment.js"></script>
+		
+		<!-- video -->
+		<script src="js/action.js"></script>
+		<script src="js/lib/extremedraw2.js"></script>
+		<script type="text/javascript">bkLib.onDomLoaded(nicEditors.allTextAreas);</script>
+		
+        
+        <!--SF-->
+        <script src="js/logger.js"></script>
+		<script src="js/ajax.js"></script>
+        <script>
+        checkChange();
+        </script>
+        <!--/SF-->
+        
+        
+		<style type="text/css">
+			#container { position: relative; width: 640px; height: 356px; }
+			#undoDiv { position: absolute; top:75%; }
+			#imageVideo { position: absolute; top: 1px; left: 1px; z-index: 10; }
+			#videoDrawingCanvas { position: absolute; top: 1px; left: 1px; z-index: 100; border-width: 1px; border-style: solid; }
+			#v { position: absolute; top: 1px; left: 1px; }
+			#subtitles { position: absolute; top: 0; width: 100%; background-color: #c7c7c7; opacity: 1; height: 40px; color: #FFF; line-height: 40px; }
+		</style>
+		
+		<style>
+			.sizeFix {
+				height: 90%;
+			}
+			#drawingCanvas { 	
+				position: absolute;
+				z-index: 100; 
+				border-width: 1px; 
+				border-style: solid;
+			}
+			#articleImage {
+				position: absolute;
+			}
+			body {
+				margin: 0px;
+				padding: 0px;
+			}
+			.button {
+				position: relative; 
+				left: -50px; 
+				width: 100px; 
+				height: 100px; 
+				background-image: url('resources/images/button_writer.png'); 
+				background-repeat: no-repeat; 
+				-webkit-transform: rotate(90deg); 
+				text-align: center;
+			}
+			.window {
+				display: none; 
+				border-style: solid; 
+				border-width: 1px;
+				height: 90%;
+				overflow: auto;
+			}
+			.assessmentStyle {
+				width: 300px;
+				background-color: #c7c7c7;
+				display: none; 
+			    position:absolute;
+				left:0;
+				right:0;
+				margin-left:auto;
+				margin-right:auto;
+				z-index: 100; 
+				top: 25px; 
+				
+				border-width: 1px; 
+				border-style: solid; 
+				border-color: black; 
+				
+			}
+		</style>
+		
+	</head>
+	<body>
+        <button onclick="displayLoggedText('note');" align="right">note</button>
+        <button onclick="displayLoggedText('essay');" align="right">essay</button>
+        <button onclick="displayLoggedText('outline');" align="right">outline</button>
+		<div style="display: none;" id="assessment-template">
+			<li>
+				<input type="checkbox" name="" value="">
+			</li>
+		</div>
+	
+		<script type="text/template" id="windowTemplate">
+			<div class="window" id="{windowName}">
+				
+			</div>
+		</script>
+		
+		<script type="text/template" id="buttonTemplate">
+			<div class="button" id="{targetWindow}_button" onclick="switchVisibility('{targetWindow}')">
+				<br>{buttonText}
+			</div>
+			<br>
+		</script>
+
+		<script type="text/template" id="noteWindowTemplate">
+			<div id='noteText' style="width: 700px; height: 100px;">This is a note</div>
+			<div id='noteSpeech' style="border: 2px solid; width: 165px; height: 23px; background-color:red;">
+			<input type="text"
+				onspeechchange="appendSpeech(this.value, 'noteText')" 
+				onwebkitspeechchange="appendSpeech(this.value, 'noteText')" 
+				x-webkit-speech speech 
+				style="float:left;  border: none; border-color: transparent;"
+				/>
+			</div>
+            
+		</script>
+
+			
+		<!-- thumbs view template   <-------------------------------------------------added -->
+		<script type="text/template" id="thumbTemplate">
+			<div class="thumb" id="{targetArt}_button" onclick="switchArticle('{targetArt}')">
+				<img src='{thbsrc}' />
+			</div>
+		</script>
+			
+		<!-- video button-->
+		<script type="text/template" id="videoDropDown">
+			<div id="video{videoValue}" ondblclick="videocalling({videoValue})" style="width: 50px; z-index:104; background-color: 00CCFF;">
+				<p>{videoName}</p>
+			</div>
+		</script>
+		
+		<!-- article button-->
+		<script type="text/template" id="articleDropDown">
+			<div id="article{articleValue}" ondblclick="articlecalling({articleValue})" style="width: 50px; z-index:104; background-color: 00CCFF;">
+				<p>{articleName}</p>
+			</div>
+		</script>
+		
+		<script type="text/template" id="articleWindowTemplate">
+			<table  align="center">
+				<tr>
+					<td align="left">
+						<div id="thumbDiv">Thumbs</div>
+					</td>
+					
+					<td align="right">
+						<canvas id='drawingCanvas' style="width: 585px; height: 735px; z-index: 100;"></canvas>
+						<iframe id="articleObj" src="" width="600px" height="750px"></iframe>
+					</td>
+				</tr>
+			</table>
+		</script>
+		
+		<!-- essay template -->
+		<script type="text/template" id="essayWindowTemplate">
+			<div id='essayText' style="width: 700px; height: 100px;">This is an essay</div>
+			<input type="text"
+				onspeechchange="appendSpeech(this.value, 'essayText')" 
+				onwebkitspeechchange="appendSpeech(this.value, 'essayText')" 
+				x-webkit-speech speech />
+		</script>
+
+		<script type="text/template" id="outlineWindowTemplate">
+			<div id='outlineText' style="width: 700px; height: 100px;">
+				Intro
+				<br><br>
+				Paragraph 1
+				<br><br>
+				Paragraph 2
+				<br><br>
+				Paragraph 3
+				<br><br>
+				Conclusion			
+			</div>
+			<input type="text"
+				onspeechchange="appendSpeech(this.value, 'outlineText')" 
+				onwebkitspeechchange="appendSpeech(this.value, 'outlineText')" 
+				x-webkit-speech speech />
+		</script>
+		
+		<script type="text/template" id="videoWindowTemplate">
+			<div id="container">  
+				<canvas id="videoDrawingCanvas" width="640" height="356"></canvas>
+
+				<canvas id="imageVideo" width="640" height="356"></canvas>
+				<video id="v" src="videos/v0.mp4" width="640" height="356">
+				</video>  
+			</div> 
+			<button onclick="video.pause()">||</button><button onclick="video.play()">|&gt;</button>  
+			<br>
+			<button onclick="clearCanvas(); shoot()">Take Snapshot</button>
+			<button onclick="clearAction()">Clear</button>
+			<br>
+			<input type="text" id="textInput" style="width: 300px">
+			<button onclick="textInputAction();">Pause For Note</button>
+			Length: <input type="text" id="textInputLength" style="width: 100px">
+			<button onclick="textInputFinishedAction();">Add Note And Play</button>
+			<br>
+			<input type="text" id="textLinkInput" style="width: 300px">
+			<button onclick="textLinkInputAction();">Pause For Note</button>
+			Length: <input type="text" id="textLinkInputLength" style="width: 100px">
+			<button onclick="textLinkInputFinishedAction();">Add Note And Play</button>
+			<br>
+			<button onclick="video.restart()" ;="">Restart With Modifications</button>
+
+			<div id="output" style="position: absolute; z-index: 100; top: 620px; left: 20px;"></div>
+			<div id="undoDiv" style="position: absolute; z-index: 101; top: 620px; left: 20px;"></div>
+		</script>
+
+		<script type="text/template" id="quoteTemplate">
+			
+			<h3>{quoteName}</h3>
+			<div id="{quote}">
+				<p><font size="1">{quoteText}</font></p>
+			</div>
+		</script>
+
+		<script type="text/javascript">
+			var area = 
+			{
+				noteText: false,
+				essayText: false,
+				outlineText: false,
+			}
+			
+			// function to turn on/off the richtext div
+			function toggleTextArea(target) {
+				if(!area[target]) {
+						area[target] = new nicEditor({fullPanel : false}).panelInstance(target,{hasPanel : true});
+				} else {
+						area[target].removeInstance(target);
+						area[target] = null;
+				}
+			}
+			
+			// appends speech to target div
+			function appendSpeech(speech, target)
+			{
+				toggleTextArea(target);
+				console.log(speech);
+				$('#' + target).append(" " + speech);
+				target.html()="";
+				toggleTextArea(target);
+			}
+			
+			// 'windows' and other globals
+			var windowsDisplayed = new Array();
+			
+			var windows = 
+			{
+				note : { display : false, element : null, name : "noteWindow" },
+				article : { display : false, element : null, name : "articleWindow" },
+				essay : { display : false, element : null, name : "essayWindow" },
+				outline : { display : false, element : null, name : "outlineWindow" },
+				video : { display : false, element : null, name : "videoWindow" }
+			};
+		
+			// views
+			WindowView = Backbone.View.extend({
+				initialize: function() {
+					this.render();
+				},
+				render: function() {
+					var windowTemplate = _.template( $("#windowTemplate").html().replace(/{windowName}/g, this.options.windowName), {} );
+					var button = new ButtonView({ el: $("#left"), windowName: this.options.windowName });
+					this.$el.append(windowTemplate);
+				}
+			});
+			
+			ButtonView = Backbone.View.extend({
+				initialize: function() {
+					this.render();
+				},
+				render: function() {
+					var questionTemplate = _.template( 
+						$("#buttonTemplate").html().replace(/{targetWindow}/g, this.options.windowName
+						).replace(/{buttonText}/g, this.options.windowName.replace(/Window/g, '')), {} 
+						);
+					this.$el.append(questionTemplate);
+				}
+			});
+						
+			NoteView = Backbone.View.extend({
+				initialize: function() {
+					this.render();
+					toggleTextArea('noteText');
+				},
+				render: function() {
+					var noteTemplate = _.template( 
+						$("#noteWindowTemplate").html(), {} 
+						);
+					this.$el.append(noteTemplate);
+				}
+			});
+						
+			// Thumb View  <-------------------------------------------------added
+			ThumbView = Backbone.View.extend({
+				initialize: function() {
+					this.render();
+				},
+				render: function() {
+					var tviewTemplate = _.template( 
+						$("#thumbTemplate").html().replace(/{targetArt}/g, this.options.imgName
+						).replace(/{thbsrc}/g, this.options.src), {} 
+					);
+					this.$el.append(tviewTemplate);
+				}
+			});
+			
+			// Video Dropdown View  <-------------------------------------------------added
+			VideoDropdown = Backbone.View.extend({
+				initialize: function() {
+					this.render();
+				},
+				render: function() {
+					var tviewTemplate = _.template( 
+						$("#videoDropDown").html().replace(/{videoName}/g, this.options.vidName
+						).replace(/{videoValue}/g, this.options.value), {} 
+					);
+					this.$el.append(tviewTemplate);
+				}
+			});
+			
+			// article Dropdown View  <-------------------------------------------------added
+			articleDropdown = Backbone.View.extend({
+				initialize: function() {
+					this.render();
+				},
+				render: function() {
+					var tviewTemplate = _.template( 
+						$("#articleDropDown").html().replace(/{articleName}/g, this.options.artName
+						).replace(/{articleValue}/g, this.options.value), {} 
+					);
+					this.$el.append(tviewTemplate);
+				}
+			});
+
+			// place holder for data fetching
+			var thumbs = new Backbone.Model({
+				data: [ 
+					{src:"resources/thumbs/thb1.jpg", name:"0"},
+					{src:"resources/thumbs/thb2.jpg", name:"1"},
+					{src:"resources/thumbs/thb3.jpg", name:"2"}
+				]
+			});
+			
+			var videoscrs = new Backbone.Model({
+				data: [ 
+					{src:"resources/videos/v0.mp4", name:"video1"},
+					{src:"resources/videos/v1.mp4", name:"video2"}
+				]
+			});
+			
+			// Article View
+			ArticleView = Backbone.View.extend({
+				initialize: function() {
+					this.render();
+					agetCanvas();
+				},
+				render: function() {
+					var articleTemplate = _.template( 
+						$("#articleWindowTemplate").html(), {} 
+					);
+					this.$el.append(articleTemplate);
+					
+					// log number of thumbs
+					console.log(thumbs.get("data").length);
+					
+					for (i=0;i< thumbs.get("data").length;i++){
+						console.log("src: " + thumbs.get("data")[i].src);
+						console.log("name: " + thumbs.get("data")[i].name);
+						var thumbTemplate = new ThumbView({ el: $("#thumbDiv"), imgName: thumbs.get("data")[i].name, src: thumbs.get("data")[i].src});
+						console.log(thumbTemplate);
+					}
+					
+					for (i=0;i< videoscrs.get("data").length;i++){
+						console.log("src: " + videoscrs.get("data")[i].src);
+						console.log("name: " + videoscrs.get("data")[i].name);
+						var vDD = new VideoDropdown({ el: $("#thumbDiv"), vidName: videoscrs.get("data")[i].name, value: i});
+						console.log(thumbTemplate);
+						$('#video' + i).draggable({
+							cursor: 'move',        					// sets the cursor apperance
+							opacity: 0.35,         					// opacity fo the element while it's dragged
+							stack: $('#video' + i)       	// brings the '#dg1' item to front
+						});
+					}
+
+					switchArticle(0);
+				}
+			});
+						
+			EssayView = Backbone.View.extend({
+				initialize: function() {
+					this.render();
+					toggleTextArea("essayText");
+				},
+				render: function() {
+					var essayTemplate = _.template( 
+						$("#essayWindowTemplate").html(), {} 
+						);
+					this.$el.append(essayTemplate);
+				}
+			});
+						
+			OutlineView = Backbone.View.extend({
+				initialize: function() {
+					this.render();
+					toggleTextArea("outlineText");
+				},
+				render: function() {
+					var outlineTemplate = _.template( 
+						$("#outlineWindowTemplate").html(), {} 
+						);
+					this.$el.append(outlineTemplate);
+				}
+			});
+			
+			// Video view
+			VideoView = Backbone.View.extend({
+				initialize: function() {
+					this.render();
+					getVideoDrawingCanvas();
+					setupAction();
+					$('#draggableArticleLink').draggable({
+						cursor: 'move',        					// sets the cursor apperance
+						opacity: 0.35,         					// opacity fo the element while it's dragged
+						stack: $('#draggableArticleLink')       // brings the '#dg1' item to front
+					});
+				},
+				render: function() {
+					var videoTemplate = _.template( 
+						$("#videoWindowTemplate").html(), {} 
+						);
+					this.$el.append(videoTemplate);
+					
+					for (i=0;i< articles.get("data").length;i++){
+						console.log("src: " + articles.get("data")[i].src);
+						var aDD = new articleDropdown({ el: $("#videoWindow"), artName: "article "+(i+1), value: i});
+						console.log(thumbTemplate);
+						$('#article' + i).draggable({
+							cursor: 'move',        					// sets the cursor apperance
+							opacity: 0.35,         					// opacity fo the element while it's dragged
+							stack: $('#article' + i)       	// brings the '#dg1' item to front
+						});
+					}
+				}
+			});
+			
+	
+			// document loaded
+			$(document).ready(function() {
+				windows.note.element = new WindowView({ el: $("#main"), windowName: "noteWindow" });
+				windows.article.element = new WindowView({ el: $("#main"), windowName: "articleWindow" });
+				windows.essay.element = new WindowView({ el: $("#main"), windowName: "essayWindow" });
+				windows.outline.element = new WindowView({ el: $("#main"), windowName: "outlineWindow" });
+				windows.video.element = new WindowView({ el: $("#main"), windowName: "videoWindow" });
+				
+				new NoteView({ el: $("#noteWindow") });
+				new ArticleView({ el: $("#articleWindow") });
+				new EssayView({ el: $("#essayWindow") });
+				new OutlineView({ el: $("#outlineWindow") });
+				new VideoView({ el: $("#videoWindow") });
+				
+				$('#notifications').draggable({
+					cursor: 'move',        					// sets the cursor apperance
+					opacity: 0.35,         					// opacity fo the element while it's dragged
+					stack: $('#notifications')       	// brings the '#dg1' item to front
+				});
+				
+				$('#noteSpeech').draggable({
+					cursor: 'move',        					// sets the cursor apperance
+					opacity: 0.35,         					// opacity fo the element while it's dragged
+					stack: $('#noteSpeech')       	// brings the '#dg1' item to front
+				});
+			});
+			
+			var windowClicked;
+			var lastWindowClicked;
+			var visibleArray = new Array();
+			
+			// change visibility of an element. 
+			function switchVisibility(target) {
+				console.log("switchVisibility" + visibleArray.length);
+				
+				$('#' + target).toggle();
+				
+				if (visibleArray.length == 0){
+					visibleArray.push(target);
+					windows[target.replace(/Window/g, '')].display = true;
+					$('#' + windows[target.replace(/Window/g, '')].name + "_button").css("background-image", "url('resources/images/button_inverse.png')");
+				}else if (visibleArray.length == 1){
+					if (windows[target.replace(/Window/g, '')].display == true){
+						visibleArray.splice(visibleArray.indexOf(target), 1);
+						windows[target.replace(/Window/g, '')].display = false;
+						$('#' + windows[target.replace(/Window/g, '')].name + "_button").css("background-image", "url('resources/images/button_writer.png')");
+					}else{
+						visibleArray.push(target);
+						windows[target.replace(/Window/g, '')].display = true;
+						$('#' + windows[target.replace(/Window/g, '')].name + "_button").css("background-image", "url('resources/images/button_inverse.png')");
+					}
+				}else if (visibleArray.length == 2){
+					if (windows[target.replace(/Window/g, '')].display == true){
+						visibleArray.splice(visibleArray.indexOf(target), 1);
+						windows[target.replace(/Window/g, '')].display = false;
+						$('#' + windows[target.replace(/Window/g, '')].name + "_button").css("background-image", "url('resources/images/button_writer.png')");
+					}else{
+						$('#' + visibleArray[0]).toggle();
+						var temp = visibleArray.shift();
+						windows[temp.replace(/Window/g, '')].display = false;
+						$('#' + windows[temp.replace(/Window/g, '')].name + "_button").css("background-image", "url('resources/images/button_writer.png')");
+						visibleArray.push(target);
+						windows[target.replace(/Window/g, '')].display = true;
+						$('#' + windows[target.replace(/Window/g, '')].name + "_button").css("background-image", "url('resources/images/button_inverse.png')");
+					}
+				}
+				
+				
+				$('#' + target).css("float", "left");
+				$('#' + target).css("width", "700px");
+				
+				adjustWindowsSize();
+				
+				console.log(visibleArray);
+			}
+			
+			function adjustWindowsSize(){
+				// set the only 1 div to max if only 1 div
+				if (visibleArray.length == 1){
+					$('#' + visibleArray[visibleArray.length-1]).css("float", "left");
+					$('#' + visibleArray[visibleArray.length-1]).css("width", "1400px");
+					$('.sizeFix').width("1400px");
+					
+				// set 2 windows to half size
+				}else{
+					for (i = 0; i < visibleArray.length; i++){
+						if (i == 0){
+							$('#' + visibleArray[i]).css("float", "left");
+						}else{
+							$('#' + visibleArray[i]).css("float", "right");
+						}
+						$('#' + visibleArray[i]).css("width", "700px");
+						$('.sizeFix').width("700px");
+						
+						// force video window to stay on the left
+						if (visibleArray[i] == "videoWindow"){
+							console.log("heres the shit");
+							$('#' + visibleArray[0]).toggle();
+							$('#' + visibleArray[1]).toggle();
+							
+							$('#' + visibleArray[i]).toggle();
+							$('#' + visibleArray[(i+1)%2]).toggle();
+							
+							$('#' + visibleArray[i]).css("float", "left");
+							$('#' + visibleArray[i]).css("width", "700px");
+							$('.sizeFix').width("700px");
+							
+							$('#' + visibleArray[(i+1)%2]).css("float", "right");
+							$('#' + visibleArray[(i+1)%2]).css("width", "700px");
+							$('.sizeFix').width("700px");
+							break;
+						}
+					}
+				}
+			}
+			
+			
+			function checkVisibility(target) {
+				return windows[target.replace(/Window/g, '')].display;
+			}
+			
+			/*
+			function getVisibleArray() {
+				var visibleNames = new Array();
+				var index = 0;
+				var keys = Object.keys(windows);
+				for (i = 0; i < keys.length; i++) { 
+					if (windows[keys[i]].display) {
+						visibleNames[index] = windows[keys[i]].name;
+						index++;
+					}
+				}
+				return visibleNames;
+			}
+			
+			function maximizeSingleVisibleWindow() {
+				//var visibleArray = getVisibleArray();
+				if (visibleArray.length == 1) {
+					$('#' + visibleArray[visibleArray.length-1]).css("float", "left");
+					$('#' + visibleArray[visibleArray.length-1]).css("width", "1400px");
+					$('.sizeFix').width("1400px");
+				}
+			}
+			*/
+			
+			// article images sources
+			var articles = new Backbone.Model({
+				data: [ 
+					{src:"resources/pages/craigs/craigslist  eugene classifieds for jobs, apartments, personals, for sale, services, community, and events.htm"},
+					{src:"resources/pages/testing1.html"},
+					{src:"resources/pages/testing3.html"},
+				]
+			});
+			
+			// function to switch article images
+			function switchArticle(target){
+				console.log(target);
+				document.getElementById("articleObj").src=articles.get("data")[target].src;
+			}
+			
+			// function to show select video with draggable div
+			function videocalling(value){
+				console.log(value);
+				if (!checkVisibility('videoWindow')){
+					switchVisibility('videoWindow');
+				}
+				document.getElementById("v").src=videoscrs.get("data")[value].src;
+			}
+			
+			// function to show select article with draggable div
+			function articlecalling(value){
+				console.log(value);
+				if (!checkVisibility('articleWindow')){
+					switchVisibility('articleWindow');
+				}
+				switchArticle(value);
+			}
+		</script>
+		
+		<div id="notifications" style="float: top; width: 25%; padding-left: 5%; padding-right: 5%; text-align: center; height: 25px; border-color: black; border-width: 1px; border-style: solid; background-color: #CCCCCC">
+			<div class="assessmentStyle" id="assessmentContainer" ><form></form></div>
+			<div id="count"></div>
+		</div>
+		
+		<div id="left" style="float: left; width: 100px;">
+		
+		</div>
+        
+        <div id="right" style="float: right; width: 200px;">
+		
+		</div>
+		
+		<div id="main" style="width: 1600px; margin-left: 60px; height: 900px; align: center; float: center; border-color: black; border-width: 1px; border-style: dotted;">
+
+		</div>
+		
+		<!-- <embed src="resources/sounds/success.wav" autostart="false" width="0" height="0" id="sound1"enablejavascript="true"> -->
+	</body>
+</html>

@@ -1,0 +1,4 @@
+SF--Fitting the areas on the pages right (right div stops pages from looking right)
+SF--Text remains in speach box after writing
+SF--Assessment to highlighting?
+SF--Box around assesment
